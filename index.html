@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<title>BOSS PEPE TERMINAL ◆ GLOBAL SYNC</title>
+<title>BOSS HEPE TERMINAL ◆ GLOBAL SYNC</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -2795,6 +2795,204 @@
     document.addEventListener('mouseleave', () => document.querySelectorAll('.hex-trail').forEach(el => el.remove()));
   })();
 
+  // ================ HWID (BROWSER FINGERPRINT) — ENHANCED ================
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? match[2] : null;
+  }
+
+  function setCookie(name, val, days) {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = name + '=' + val + ';expires=' + d.toUTCString() + ';path=/;SameSite=Strict';
+  }
+
+  function getStoredHWID() {
+    return localStorage.getItem('bh_hwid')
+      || sessionStorage.getItem('bh_hwid')
+      || getCookie('bh_hwid');
+  }
+
+  function storeHWID(id) {
+    try { localStorage.setItem('bh_hwid', id); } catch(e) {}
+    try { sessionStorage.setItem('bh_hwid', id); } catch(e) {}
+    setCookie('bh_hwid', id, 365);
+  }
+
+  async function generateHWID() {
+    const existing = getStoredHWID();
+    if (existing) {
+      storeHWID(existing);
+      return existing;
+    }
+
+    const parts = [];
+
+    // Canvas fingerprint
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.textBaseline = 'top';
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#f60';
+      ctx.fillRect(125,1,62,20);
+      ctx.fillStyle = '#069';
+      ctx.fillText('Cwm fjordbank glyphs vext quiz, \ud83d\ude03', 2, 15);
+      ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+      ctx.font = '18pt Arial';
+      ctx.fillText('Cwm fjordbank glyphs', 4, 45);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = 'rgb(255,0,255)';
+      ctx.beginPath();
+      ctx.arc(50,50,50,0,Math.PI*2);
+      ctx.fill();
+      parts.push(canvas.toDataURL());
+    } catch(e) { parts.push('canvas:fail'); }
+
+    // WebGL
+    try {
+      const gl = document.createElement('canvas').getContext('webgl');
+      if (gl) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) {
+          parts.push(gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) || '');
+          parts.push(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '');
+        }
+        parts.push(gl.getParameter(gl.MAX_TEXTURE_SIZE) || '');
+      }
+    } catch(e) { parts.push('webgl:fail'); }
+
+    // WebGL2
+    try {
+      const gl2 = document.createElement('canvas').getContext('webgl2');
+      if (gl2) parts.push(gl2.getParameter(gl2.MAX_VERTEX_UNIFORM_VECTORS) || '');
+    } catch(e) {}
+
+    // Screen
+    parts.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth + 'x' + screen.availWidth + 'x' + screen.availHeight);
+    parts.push(screen.orientation?.type || '');
+
+    // Navigator
+    parts.push(navigator.platform || '');
+    parts.push(navigator.language || '');
+    parts.push(navigator.hardwareConcurrency || '');
+    parts.push(navigator.deviceMemory || '');
+    parts.push(navigator.maxTouchPoints || '');
+    parts.push(navigator.productSub || '');
+
+    // Timezone
+    parts.push(Intl.DateTimeFormat().resolvedOptions().timeZone || '');
+    parts.push(new Date().getTimezoneOffset());
+
+    // Audio fingerprint
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ac.createOscillator();
+      const dst = ac.createAnalyser();
+      osc.connect(dst);
+      osc.frequency.value = 440;
+      parts.push(ac.sampleRate || '');
+      ac.close();
+    } catch(e) { parts.push('audio:fail'); }
+
+    // Font detection (basic)
+    const testStr = 'IllegalAccessException';
+    const testDiv = document.createElement('div');
+    testDiv.style.cssText = 'position:absolute;visibility:hidden;font-size:40px;white-space:nowrap;';
+    testDiv.textContent = testStr;
+    document.body.appendChild(testDiv);
+    for (const font of ['monospace', 'serif', 'sans-serif', 'Arial', 'Times New Roman', 'Courier New']) {
+      testDiv.style.fontFamily = font;
+      parts.push(font + ':' + testDiv.offsetWidth);
+    }
+    document.body.removeChild(testDiv);
+
+    const str = parts.join('||');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const id = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+    storeHWID(id);
+    return id;
+  }
+
+  let hwid = '';
+
+  // ================ BAN HANDLER — BLUE SCREEN ================
+  function showBanScreen(reason) {
+    stopPolling();
+    document.title = 'FATAL_ERROR';
+    document.body.innerHTML = `
+      <style>
+        @keyframes bsodFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes bsodScan { 0% { background-position: 0 0; } 100% { background-position: 0 20px; } }
+        @keyframes bsodProgress { 0% { width: 0%; } 100% { width: 100%; } }
+        @keyframes bsodBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+      </style>
+      <div id="bsodScreen" style="position:fixed;inset:0;z-index:99999;background:#0000AA;color:#fff;font-family:'Lucida Console','Courier New',monospace;display:flex;flex-direction:column;padding:40px 20px 20px;animation:bsodFadeIn 0.3s;overflow:auto;">
+        <div style="text-align:center;margin-bottom:20px;">
+          <div style="font-size:48px;font-weight:bold;letter-spacing:4px;">:(</div>
+          <div style="font-size:14px;margin-top:10px;letter-spacing:1px;">Your PC ran into a problem and needs to restart.</div>
+          <div style="font-size:12px;margin-top:4px;color:#ccccff;">We're just collecting some error info, and then we'll restart for you.</div>
+        </div>
+        <div style="font-size:11px;line-height:1.8;max-width:700px;margin:0 auto;width:100%;">
+          <div style="margin-bottom:6px;">${Math.round(Math.random()*100)}% complete</div>
+          <div style="height:4px;background:#0033aa;border-radius:2px;margin-bottom:20px;overflow:hidden;">
+            <div style="height:100%;background:#88aaff;border-radius:2px;animation:bsodProgress 4s ease-out forwards;"></div>
+          </div>
+          <div style="margin-bottom:14px;">Stop code: <span style="color:#ffff00;">SYSTEM_SERVICE_EXCEPTION</span></div>
+          <div style="margin-bottom:4px;color:#ccccff;">What failed: <span style="color:#ffcc00;">bhsec.sys</span></div>
+          <div style="margin-bottom:4px;color:#ccccff;">HWID: <span style="color:#ff6666;">${hwid ? hwid.slice(0,20).toUpperCase()+'...' : 'LOCKED'}</span></div>
+          <div style="margin-bottom:4px;color:#ccccff;">Reason: <span style="color:#ffcc00;">${reason || 'PERMANENT_BAN'}</span></div>
+          <div style="margin-top:20px;font-size:10px;color:#8888cc;border-top:1px solid #3333cc;padding-top:14px;">
+            <div>If you call a support person, give them this info:</div>
+            <div style="margin-top:6px;">Stop code: SYSTEM_SERVICE_EXCEPTION</div>
+            <div>What failed: bhsec.sys (BH_SECURITY_VIOLATION)</div>
+            <div>Device ID: HWID_${hwid ? hwid.slice(0,16).toUpperCase() : 'LOCKED'}</div>
+            <div style="margin-top:10px;color:#6666aa;animation:bsodBlink 1.5s infinite;">This device has been permanently blocked by system administrator.</div>
+          </div>
+        </div>
+      </div>
+    `;
+    throw new Error('BANNED');
+  }
+
+  function apiHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (hwid) { headers['X-HWID'] = hwid; }
+    return headers;
+  }
+
+  async function apiFetch(url, options) {
+    const res = await fetch(url, { ...options, headers: { ...apiHeaders(), ...options?.headers } });
+    if (res.status === 403) {
+      const data = await res.json();
+      showBanScreen(data.reason);
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Request failed');
+    }
+    return res.json();
+  }
+
+  // Check ban on page load before anything else
+  async function checkBanOnLoad() {
+    try {
+      hwid = await generateHWID();
+      const res = await fetch('https://backend-production-f690.up.railway.app/api/checkban', {
+        headers: apiHeaders()
+      });
+      if (res.status === 403) {
+        const data = await res.json();
+        showBanScreen(data.reason);
+      }
+    } catch(e) {
+      if (e.message === 'BANNED') throw e;
+    }
+  }
+
   // ================ FORCED REGISTRATION (ONE-TIME) ================
   let myUsername = localStorage.getItem('chatUsername') || '';
   let messagesList = [];
@@ -2823,14 +3021,13 @@
 
   async function fetchMessages() {
     try {
-      const res = await fetch('/api/messages');
-      const data = await res.json();
+      const data = await apiFetch('https://backend-production-f690.up.railway.app/api/messages');
       if (Array.isArray(data)) {
         messagesList = data;
         renderMessages();
       }
     } catch(e) {
-      console.warn('Cannot reach server:', e.message);
+      if (!e.message.includes('BANNED')) console.warn('Cannot reach server:', e.message);
     }
   }
 
@@ -2866,15 +3063,14 @@
     if(!myUsername) { showUsernameModal(); return; }
     input.value = "";
     try {
-      const result = await fetch('/api/send', {
+      const result = await apiFetch('https://backend-production-f690.up.railway.app/api/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ip: myUsername, text })
-      }).then(r => r.json());
+      });
       if (result.id) ownMessageIds.add(result.id);
       await fetchMessages();
     } catch(e) {
-      console.warn('Send failed:', e.message);
+      if (!e.message.includes('BANNED')) console.warn('Send failed:', e.message);
     }
   }
 
@@ -3001,30 +3197,30 @@
     supportMessages.appendChild(userDiv);
     supportMessages.scrollTop = supportMessages.scrollHeight;
     try {
-      const r = await fetch('/api/support', {
+      await apiFetch('https://backend-production-f690.up.railway.app/api/support', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, text })
       });
-      if (!r.ok) {
-        const data = await r.json().catch(() => ({}));
-        throw new Error(data.error || 'Send failed');
-      }
     } catch(e) {
-      console.warn('Support send failed:', e.message);
-      const errDiv = document.createElement('div');
-      errDiv.className = 'support-msg system';
-      errDiv.textContent = `> SUPPORT ◆ ${e.message}`;
-      supportMessages.appendChild(errDiv);
-      supportMessages.scrollTop = supportMessages.scrollHeight;
+      if (!e.message.includes('BANNED')) {
+        console.warn('Support send failed:', e.message);
+        const errDiv = document.createElement('div');
+        errDiv.className = 'support-msg system';
+        errDiv.textContent = `> SUPPORT ◆ ${e.message}`;
+        supportMessages.appendChild(errDiv);
+        supportMessages.scrollTop = supportMessages.scrollHeight;
+      }
     }
   }
 
   supportSend.addEventListener('click', sendSupportMessage);
   supportInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendSupportMessage(); });
 
-  showHome();
-  buildServersGrid();
+  (async function init() {
+    try { await checkBanOnLoad(); } catch(e) { if (e.message === 'BANNED') return; }
+    showHome();
+    buildServersGrid();
+  })();
 
   // ================ ENTRANCE ANIMATIONS ================
   setTimeout(() => {
@@ -3068,5 +3264,6 @@
     });
   })();
 </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"90e2d5e7d72e4b8fa40fe9f731fa8d76","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
